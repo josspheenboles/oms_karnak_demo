@@ -19,3 +19,7 @@ venv/
 
 # بيانات التطوير (رفع المستندات)
 data/
+
+# Frontend
+web/node_modules/
+web/dist/
