@@ -164,3 +164,21 @@ def chat_with_agent(req: ChatRequest):
         return {"answer": final_message}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/evaluate", response_model=JudgeScore)
+def evaluate_agent_response(req: EvalRequest):
+    """Evaluate an agent's response locally using the Karnak model."""
+    try:
+            prompt = f"""
+            You are a strict and objective evaluator of responses from RAG systems and agents.
+            Evaluate the response based solely on the question and the retrieved context, without assuming any external information.
+            Return the result exclusively in the required structure.
+
+            Question: {req.question}
+            Retrieved Context: {req.context or "No context retrieved"}
+            Agent's Response: {req.answer}
+            """
+            score: JudgeScore = judge_llm.invoke(prompt)
+            return score
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
