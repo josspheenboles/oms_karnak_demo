@@ -23,7 +23,21 @@ embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="karnak_docs")
 
-@tool
+
+def chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> list[str]:
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return []
+    chunks = []
+    start = 0
+    step = max(1, chunk_size - overlap)
+    while start < len(cleaned):
+        chunks.append(cleaned[start : start + chunk_size])
+        start += step
+    return chunks
+
+
+@tool(description="Search through stored documents and files to answer user questions.")
 def search_knowledge_base(query: str) -> str:
     query_vec = embeddings.embed_query(query)
     results = collection.query(query_embeddings=[query_vec], n_results=2)
@@ -32,7 +46,7 @@ def search_knowledge_base(query: str) -> str:
         return "no info"
     return "\n---\n".join(docs)
 
-@tool
+@tool(description="Calculate simple arithmetic operations, such as: 150 * 0.14")
 def calculate_expression(expression: str) -> str:
     try:
         allowed_chars = set("0123456789+-*/(). ")
