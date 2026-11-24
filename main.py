@@ -2,11 +2,32 @@ import io
 import os
 from docx import Document
 from fastapi import FastAPI, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import chromadb
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
+
+
+class JudgeScore(BaseModel):
+    faithfulness: int = Field(..., ge=1, le=5, description="The extent to which the answer adheres to the context, on a scale of 1 to 5")
+    relevance: int = Field(..., ge=1, le=5, description="The relevance of the answer to the question, on a scale of 1 to 5")
+    reason: str = Field(..., description="A brief and clear justification for the score")
+class EvalRequest(BaseModel):
+    question: str
+    context: str = ""
+    answer: str
+
+KARNAK_JUDGE_MODEL = os.getenv(
+    "KARNAK_MODEL",
+    "hf.co/mradermacher/Karnak-6B-v1.0-GGUF:Q4_K_M",
+)
+judge_llm = ChatOllama(
+    model=KARNAK_JUDGE_MODEL,
+    temperature=0,
+    num_ctx=2048,
+    num_predict=256,
+).with_structured_output(JudgeScore)
 
 app = FastAPI(title="Karnak CPU Local RAG & Agent API")
 
