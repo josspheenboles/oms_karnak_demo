@@ -34,34 +34,3 @@ def init_db() -> None:
     with get_conn() as conn:
         conn.execute(TABLE)
         conn.execute(INDEX)
-
-
-def find_by_hash(space_id: str, sha256: str) -> dict | None:
-    with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM documents WHERE space_id = %s AND sha256 = %s"
-            " ORDER BY created_at LIMIT 1",
-            (space_id, sha256),
-        ).fetchone()
-
-
-def insert_document(**row) -> dict:
-    with get_conn() as conn:
-        return conn.execute(
-            """
-            INSERT INTO documents
-                (title, filename, ext, size_bytes, sha256, stored_path,
-                 space_id, classification, owner_id, status)
-            VALUES
-                (%(title)s, %(filename)s, %(ext)s, %(size_bytes)s, %(sha256)s,
-                 %(stored_path)s, %(space_id)s, %(classification)s,
-                 %(owner_id)s, %(status)s)
-            RETURNING *
-            """,
-            row,
-        ).fetchone()
-
-
-def get_document(doc_id: str) -> dict | None:
-    with get_conn() as conn:
-        return conn.execute("SELECT * FROM documents WHERE id = %s", (doc_id,)).fetchone()
