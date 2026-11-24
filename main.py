@@ -22,3 +22,12 @@ embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="karnak_docs")
+
+@tool
+def search_knowledge_base(query: str) -> str:
+    query_vec = embeddings.embed_query(query)
+    results = collection.query(query_embeddings=[query_vec], n_results=2)
+    docs = results.get("documents", [[]])[0]
+    if not docs:
+        return "no info"
+    return "\n---\n".join(docs)
