@@ -56,3 +56,16 @@ class DocumentInput(BaseModel):
 
 class ChatRequest(BaseModel):
     query: str
+
+@app.post("/ingest")
+def ingest_document(doc: DocumentInput):
+    try:
+        vec = embeddings.embed_query(doc.text)
+        collection.upsert(
+            ids=[doc.doc_id],
+            embeddings=[vec],
+            documents=[doc.text]
+        )
+        return {"status": "success", "message": f"*document saved {doc.doc_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
