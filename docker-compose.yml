@@ -1,7 +1,7 @@
 services:
-  app:
+  api:
     build:
-      context: .
+      context: ./api
     env_file: .env
     ports:
       - "127.0.0.1:8000:8000"
@@ -9,6 +9,11 @@ services:
       # مطلوب على Linux: يجعل host.docker.internal يشير إلى الهوست
       # حيث يعمل Ollama (لا توجد خدمة ollama داخل هذا الملف).
       - "host.docker.internal:host-gateway"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test:
@@ -20,3 +25,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag}
+      POSTGRES_DB: ${POSTGRES_DB:-rag}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag} -d ${POSTGRES_DB:-rag}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
