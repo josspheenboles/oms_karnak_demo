@@ -41,3 +41,11 @@ def calculate_expression(expression: str) -> str:
         return str(eval(expression))
     except Exception as e:
         return f"errir {str(e)}"
+
+tools = [search_knowledge_base, calculate_expression]
+agent_executor = create_react_agent(
+    llm,
+    tools,
+    prompt="You are an intelligent Egyptian assistant who speaks Arabic fluently, concisely, and clearly. Use the available tools whenever necessary."
+)
+
