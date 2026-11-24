@@ -1,0 +1,11 @@
+# Model weights (large binaries, not for git)
+karnak-6b/
+*.safetensors
+*.bin
+*.gguf
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
