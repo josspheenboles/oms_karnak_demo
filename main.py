@@ -57,8 +57,8 @@ class DocumentInput(BaseModel):
 class ChatRequest(BaseModel):
     query: str
 
-@app.post("/ingest")
-def ingest_document(doc: DocumentInput):
+@app.post("/upload")
+def upload_document(doc: DocumentInput):
     try:
         vec = embeddings.embed_query(doc.text)
         collection.upsert(
@@ -67,5 +67,14 @@ def ingest_document(doc: DocumentInput):
             documents=[doc.text]
         )
         return {"status": "success", "message": f"*document saved {doc.doc_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agent/chat")
+def chat_with_agent(req: ChatRequest):
+    try:
+        response = agent_executor.invoke({"messages": [("user", req.query)]})
+        final_message = response["messages"][-1].content
+        return {"answer": final_message}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
