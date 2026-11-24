@@ -49,3 +49,10 @@ agent_executor = create_react_agent(
     prompt="You are an intelligent Egyptian assistant who speaks Arabic fluently, concisely, and clearly. Use the available tools whenever necessary."
 )
 
+class DocumentInput(BaseModel):
+    doc_id: str
+    text: str
+
+
+class ChatRequest(BaseModel):
+    query: str
