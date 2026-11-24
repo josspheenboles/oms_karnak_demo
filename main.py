@@ -1,5 +1,7 @@
+import io
 import os
-from fastapi import FastAPI, HTTPException
+from docx import Document
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import chromadb
 from langchain_ollama import ChatOllama, OllamaEmbeddings
@@ -23,8 +25,25 @@ embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="karnak_docs")
 
+def extract_docx_text(raw_bytes: bytes) -> str:
+    """Extract text from paragraphs and tables in a .docx file."""
+    doc = Document(io.BytesIO(raw_bytes))
+    parts: list[str] = []
+
+    for para in doc.paragraphs:
+        if para.text.strip():
+            parts.append(para.text.strip())
+
+    for table in doc.tables:
+        for row in table.rows:
+            row_cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+            if row_cells:
+                parts.append(" | ".join(row_cells))
+
+    return "\n".join(parts)
 
 def chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> list[str]:
+    """Split text into overlapping chunks for RAG retrieval."""
     cleaned = " ".join(text.split())
     if not cleaned:
         return []
@@ -42,7 +61,7 @@ def search_knowledge_base(query: str) -> str:
     query_vec = embeddings.embed_query(query)
     results = collection.query(query_embeddings=[query_vec], n_results=2)
     docs = results.get("documents", [[]])[0]
-    if not docs:
+    if not docs:     
         return "no info"
     return "\n---\n".join(docs)
 
@@ -72,18 +91,50 @@ class ChatRequest(BaseModel):
     query: str
 
 @app.post("/upload")
-def upload_document(doc: DocumentInput):
-    try:
-        vec = embeddings.embed_query(doc.text)
-        collection.upsert(
-            ids=[doc.doc_id],
-            embeddings=[vec],
-            documents=[doc.text]
+async def upload_file(file: UploadFile = File(...)):
+    allowed_extensions = (".docx", ".txt", ".md", ".csv", ".log")
+    filename = file.filename or "uploaded_file.txt"
+    lower_name = filename.lower()
+
+    if not lower_name.endswith(allowed_extensions):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Upload a .docx file or text file (.txt, .md, .csv, .log)."
         )
-        return {"status": "success", "message": f"*document saved {doc.doc_id}"}
+
+    try:
+        raw_bytes = await file.read()
+        if not raw_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        if lower_name.endswith(".docx"):
+            text = extract_docx_text(raw_bytes)
+        else:
+            text = raw_bytes.decode("utf-8", errors="ignore")
+
+        chunks = chunk_text(text, chunk_size=600, overlap=100)
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No readable text found in the file.")
+
+        vectors = embeddings.embed_documents(chunks)
+        ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
+        metadatas = [{"source": filename, "chunk_index": i} for i in range(len(chunks))]
+
+        collection.upsert(
+            ids=ids,
+            embeddings=vectors,
+            documents=chunks,
+            metadatas=metadatas,
+        )
+        return {
+            "status": "success",
+            "filename": filename,
+            "chunks_stored": len(chunks),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/agent/chat")
 def chat_with_agent(req: ChatRequest):
     try:
