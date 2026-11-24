@@ -1,4 +1,4 @@
-FROM ./karnak-6b
+FROM ./karnak-6b-Q4_K_M.gguf
 TEMPLATE """{{ if .System }}<|im_start|>system
 {{ .System }}<|im_end|>
 {{ end }}{{ range .Messages }}<|im_start|>{{ .Role }}

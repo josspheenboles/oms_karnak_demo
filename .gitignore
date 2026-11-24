@@ -4,6 +4,9 @@ karnak-6b/
 *.bin
 *.gguf
 
+# Local toolchain (llama.cpp clone + binaries + venv, ~1.5 GB)
+tools/
+
 # Python
 __pycache__/
 *.py[cod]
