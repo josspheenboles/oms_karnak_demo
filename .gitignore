@@ -4,6 +4,10 @@ karnak-6b/
 *.bin
 *.gguf
 
+# Local env (per-machine values; .env.example is the versioned template)
+.env
+.env.local
+
 # Local toolchain (llama.cpp clone + binaries + venv, ~1.5 GB)
 tools/
 
