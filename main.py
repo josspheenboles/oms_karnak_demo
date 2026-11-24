@@ -31,3 +31,13 @@ def search_knowledge_base(query: str) -> str:
     if not docs:
         return "no info"
     return "\n---\n".join(docs)
+
+@tool
+def calculate_expression(expression: str) -> str:
+    try:
+        allowed_chars = set("0123456789+-*/(). ")
+        if not set(expression).issubset(allowed_chars):
+            return "not allowed"
+        return str(eval(expression))
+    except Exception as e:
+        return f"errir {str(e)}"
